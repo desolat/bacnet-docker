@@ -1,18 +1,37 @@
 
 version: '3'
+
+networks:
+  bacnet:
+
 services:
-
   server:
+    build: .
     image: bacnet
+    container_name: server
+    networks:
+      - bacnet    
     command: ["bacserv", "200001"]
-    network_mode: bridge
 
-  # Pump values into server.
+  # write BACnet values into server.
   # TODO: Needs more convenient Env based config
   simulator:
+    build: .
     image: bacnet
+    container_name: simulator
     depends_on:
       - server
+    networks:
+      - bacnet
+
     command: ["perl", "/simulator"]
-    network_mode: bridge
-    
+  
+  # will only capture broadcasts (use a tcpdump container capturing the container network to get its traffic)
+  tcpdump:
+    image: kaazing/tcpdump
+    container_name: tcpdump
+    networks:
+      - bacnet
+    volumes:
+      - ./tcpdump:/tcpdump
+    command: [ "-C", "100", "-W", "2", "-v", "-i", "any", "-w", "/tcpdump/broadcasts.pcap" ]
